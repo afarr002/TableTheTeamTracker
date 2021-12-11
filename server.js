@@ -13,11 +13,12 @@ const connection = mysql.createConnection({
 const startMenu = [
   "View All Departments",
   "View All Roles",
-  "View All Employees",
+  "View All Staff",
   "Add a Department",
   "Add a Role",
   "Add an Employee",
-  "Update an Employee Role",
+  "Update an Employee's Role",
+  "Update an Employee's Manager",
 ];
 
 const init = () => {
@@ -36,7 +37,7 @@ const init = () => {
         case "View All Roles":
           viewAllRoles();
           break;
-        case "View All Employees":
+        case "View All Staff":
           viewAllEmps();
           break;
         case "Add a Department":
@@ -48,8 +49,11 @@ const init = () => {
         case "Add an Employee":
           addEmp();
           break;
-        case "Update an Employee Role":
+        case "Update an Employee's Role":
           updEmpRole();
+          break;
+        case "Update an Employee's Manager":
+          updEmpMgr();
           break;
       }
     });
@@ -105,7 +109,9 @@ const viewAllEmps = () => {
       employees
         LEFT JOIN roles on employees.role_id = roles.id 
         LEFT JOIN departments on roles.department_id = departments.id 
-        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      employees.role_id`,
     (err, res) => {
       if (err) throw err;
       console.log("\n");
@@ -227,7 +233,9 @@ const addEmp = () => {
       employees
         LEFT JOIN roles on employees.role_id = roles.id 
         LEFT JOIN departments on roles.department_id = departments.id 
-        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      employees.role_id`,
       (err, res) => {
         if (err) throw err;
         console.log("\n");
@@ -272,7 +280,9 @@ const updEmpRole = () => {
       employees
         LEFT JOIN roles on employees.role_id = roles.id 
         LEFT JOIN departments on roles.department_id = departments.id 
-        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      employees.role_id`,
       (err, res) => {
         if (err) throw err;
         console.log("\n");
@@ -282,3 +292,85 @@ const updEmpRole = () => {
     );
   });
 };
+
+const updEmpMgrQ = [
+  {
+    type: "input",
+    message:
+      "Enter the last name of the employee who's manager you need to update:",
+    name: "updMgrLastName",
+  },
+  {
+    type: "input",
+    message:
+      "Enter the first name of the employee who's manager you need to update:",
+    name: "updMgrFirstName",
+  },
+  {
+    type: "input",
+    message: "Enter the ID for your employee's new manager (99 if Null):",
+    name: "updMgrID",
+  },
+];
+
+const updEmpMgr = () => {
+  inquirer.prompt(updEmpMgrQ).then((updEmpMgrA) => {
+    connection.query(
+      "UPDATE employees SET manager_id = ? WHERE last_name = ? AND first_name = ?",
+      [
+        updEmpMgrA.updMgrID >= 99 ? null : updEmpMgrA.updMgrID,
+        updEmpMgrA.updMgrLastName,
+        updEmpMgrA.updMgrFirstName,
+      ]
+    );
+    connection.query(
+      `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      employees.role_id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Staff List:", res);
+        init();
+      }
+    );
+  });
+};
+
+/*
+const viewEmpByMgr = () => {
+
+}
+
+const viewEmpByDept = () => {
+
+}
+
+const dltDept = () => {
+
+}
+
+const dltRole = () => {
+
+}
+
+const dltEmp = () => {
+
+}
+
+const viewBudgetByDept = () => {
+
+}
+*/
