@@ -1,33 +1,118 @@
 const inquirer = require("inquirer");
-const initFunc = require("./index");
-
+const mysql = require("mysql2");
 require("console.table");
+
+const connection = mysql.createConnection({
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "root",
+  database: "emp_db",
+});
+
+const startMenu = [
+  "View All Departments",
+  "View All Roles",
+  "View All Employees",
+  "Add a Department",
+  "Add a Role",
+  "Add an Employee",
+  "Update an Employee Role",
+];
+
+const init = () => {
+  inquirer
+    .prompt({
+      type: "list",
+      message: "What would you like to do:",
+      name: "startMenuChoice",
+      choices: startMenu,
+    })
+    .then((userInput) => {
+      switch (userInput.startMenuChoice) {
+        case "View All Departments":
+          viewAllDepts();
+          break;
+        case "View All Roles":
+          viewAllRoles();
+          break;
+        case "View All Employees":
+          viewAllEmps();
+          break;
+        case "Add a Department":
+          addDept();
+          break;
+        case "Add a Role":
+          addRole();
+          break;
+        case "Add an Employee":
+          addEmp();
+          break;
+        case "Update an Employee Role":
+          updEmpRole();
+          break;
+      }
+    });
+};
+
+connection.connect((err) => {
+  if (err) throw err;
+  console.log(`Now connected as ID ${connection.threadId}!`);
+  init();
+});
 
 const viewAllDepts = () => {
   // presented with a formatted table showing department names and department ids
   connection.query("SELECT * FROM departments", (err, res) => {
     if (err) throw err;
+    console.log("\n");
     console.table("All Departments:", res);
+    init();
   });
-  initFunc.init();
 };
 
 const viewAllRoles = () => {
   // presented with the job title, role id, the department that role belongs to, and the salary for that role
-  connection.query("SELECT * FROM roles", (err, res) => {
-    if (err) throw err;
-    console.table("All Roles:", res);
-  });
-  initFunc.init();
+  connection.query(
+    `SELECT
+      roles.id,
+      roles.title,
+      departments.name AS departments,
+      roles.salary
+    FROM roles 
+      LEFT JOIN departments on roles.department_id = departments.id`,
+    (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("All Roles:", res);
+      init();
+    }
+  );
 };
 
 const viewAllEmps = () => {
   // presented with a formatted table showing employee data, including employee ids, first names, last names, job titles, departments, salaries, and managers that the employees report to
-  connection.query("SELECT * FROM employees", (err, res) => {
-    if (err) throw err;
-    console.table("All Employees:", res);
-  });
-  initFunc.init();
+  connection.query(
+    `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+    (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Total Staff:", res);
+      init();
+    }
+  );
 };
 
 const addDeptQ = [
@@ -44,8 +129,13 @@ const addDept = () => {
     connection.query("INSERT INTO departments SET ?", {
       name: addDeptA.addDept,
     });
+    connection.query("SELECT * FROM departments", (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Updated Departments:", res);
+      init();
+    });
   });
-  initFunc.init();
 };
 
 const addRoleQ = [
@@ -74,8 +164,22 @@ const addRole = () => {
       salary: addRoleA.addRoleSalary,
       department_id: addRoleA.addRoleDeptID,
     });
+    connection.query(
+      `SELECT
+      roles.id,
+      roles.title,
+      departments.name AS departments,
+      roles.salary
+    FROM roles 
+      LEFT JOIN departments on roles.department_id = departments.id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Roles:", res);
+        init();
+      }
+    );
   });
-  initFunc.init();
 };
 
 const addEmpQ = [
@@ -108,14 +212,30 @@ const addEmp = () => {
       first_name: addEmpA.firstName,
       last_name: addEmpA.lastName,
       role_id: addEmpA.empRoleID,
-      manager_id: addEmpA.empMgrID,
+      manager_id: addEmpA.empMgrID === "" ? null : addEmpA.empMgrID,
     });
-    connection.query("SELECT * FROM employees", (err, res) => {
-      if (err) throw err;
-      console.table("All Employees:", res);
-    });
+    connection.query(
+      `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Staff List:", res);
+        init();
+      }
+    );
   });
-  initFunc.init();
 };
 
 const updEmpRoleQ = [
@@ -139,20 +259,26 @@ const updEmpRole = () => {
       updEmpRoleA.updRoleID,
       updEmpRoleA.updRoleName,
     ]);
-    initFunc.init();
-    connection.query("SELECT * FROM employees", (err, res) => {
-      if (err) throw err;
-      console.table("Updated Employees:", res);
-    });
+    connection.query(
+      `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Staff List:", res);
+        init();
+      }
+    );
   });
-};
-
-module.exports = {
-  viewAllDepts,
-  viewAllRoles,
-  viewAllEmps,
-  addDept,
-  addRole,
-  addEmp,
-  updEmpRole,
 };
