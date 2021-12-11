@@ -1,0 +1,23 @@
+{
+  "name": "tabletheteamtracker",
+  "version": "1.0.0",
+  "description": "cli interface to track team via sql database",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/afarr002/TableTheTeamTracker.git"
+  },
+  "author": "aaron",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/afarr002/TableTheTeamTracker/issues"
+  },
+  "homepage": "https://github.com/afarr002/TableTheTeamTracker#readme",
+  "dependencies": {
+    "inquirer": "^8.2.0",
+    "mysql2": "^2.3.3"
+  }
+}
