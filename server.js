@@ -1,39 +1,150 @@
-const mysql = require("mysql2");
+const inquirer = require("inquirer");
+const initFunc = require("./index");
 
-const connection = mysql.createConnection({
-  host: "localhost",
-  port: 3306,
-  user: "root",
-  password: "root",
-  database: "emp_db",
-});
+require("console.table");
 
 const viewAllDepts = () => {
-  // presented with a foramtted table showing department names and department ids
+  // presented with a formatted table showing department names and department ids
+  connection.query("SELECT * FROM departments", (err, res) => {
+    if (err) throw err;
+    console.table("All Departments:", res);
+  });
+  initFunc.init();
 };
 
 const viewAllRoles = () => {
   // presented with the job title, role id, the department that role belongs to, and the salary for that role
+  connection.query("SELECT * FROM roles", (err, res) => {
+    if (err) throw err;
+    console.table("All Roles:", res);
+  });
+  initFunc.init();
 };
 
 const viewAllEmps = () => {
   // presented with a formatted table showing employee data, including employee ids, first names, last names, job titles, departments, salaries, and managers that the employees report to
+  connection.query("SELECT * FROM employees", (err, res) => {
+    if (err) throw err;
+    console.table("All Employees:", res);
+  });
+  initFunc.init();
 };
+
+const addDeptQ = [
+  {
+    type: "input",
+    message: "Enter new department:",
+    name: "addDept",
+  },
+];
 
 const addDept = () => {
   // prompted to enter the name of the department and that department is added to the database
+  inquirer.prompt(addDeptQ).then((addDeptA) => {
+    connection.query("INSERT INTO departments SET ?", {
+      name: addDeptA.addDept,
+    });
+  });
+  initFunc.init();
 };
+
+const addRoleQ = [
+  {
+    type: "input",
+    message: "Enter the title of the new role to be added:",
+    name: "addRoleTitle",
+  },
+  {
+    type: "input",
+    message: "Enter the salary for the new role:",
+    name: "addRoleSalary",
+  },
+  {
+    type: "input",
+    message: "Enter the Department ID for the new role:",
+    name: "addRoleDeptID",
+  },
+];
 
 const addRole = () => {
   // prompted to enter the name, salary, and department for the role and that role is added to the database
+  inquirer.prompt(addRoleQ).then((addRoleA) => {
+    connection.query("INSERT INTO roles SET ?", {
+      title: addRoleA.addRoleTitle,
+      salary: addRoleA.addRoleSalary,
+      department_id: addRoleA.addRoleDeptID,
+    });
+  });
+  initFunc.init();
 };
+
+const addEmpQ = [
+  {
+    type: "input",
+    message: "Enter your new employee's first name",
+    name: "firstName",
+  },
+  {
+    type: "input",
+    message: "Enter your new employee's last name:",
+    name: "lastName",
+  },
+  {
+    type: "input",
+    message: "Enter the Id for your employee's new role:",
+    name: "empRoleID",
+  },
+  {
+    type: "input",
+    message: "Enter the ID for your employee's new manager:",
+    name: "empMgrID",
+  },
+];
 
 const addEmp = () => {
   // prompted to enter the employee’s first name, last name, role, and manager, and that employee is added to the database
+  inquirer.prompt(addEmpQ).then((addEmpA) => {
+    connection.query("INSERT INTO employees SET ?", {
+      first_name: addEmpA.firstName,
+      last_name: addEmpA.lastName,
+      role_id: addEmpA.empRoleID,
+      manager_id: addEmpA.empMgrID,
+    });
+    connection.query("SELECT * FROM employees", (err, res) => {
+      if (err) throw err;
+      console.table("All Employees:", res);
+    });
+  });
+  initFunc.init();
 };
+
+const updEmpRoleQ = [
+  {
+    type: "input",
+    message:
+      "Enter the last name of the employee who's role you need to update:",
+    name: "updRoleName",
+  },
+  {
+    type: "input",
+    message: "Enter the ID for your employee's new role:",
+    name: "updRoleID",
+  },
+];
 
 const updEmpRole = () => {
   // prompted to select an employee to update and their new role and this information is updated in the database
+  inquirer.prompt(updEmpRoleQ).then((updEmpRoleA) => {
+    connection.query("UPDATE employees SET role_id = ? WHERE last_name = ?", [
+      updEmpRoleA.updRoleID,
+      updEmpRoleA.updRoleName,
+    ]);
+    initFunc.init();
+    connection.query("SELECT * FROM employees", (err, res) => {
+      if (err) throw err;
+      console.table("Updated Employees:", res);
+    });
+  });
 };
 
 module.exports = {

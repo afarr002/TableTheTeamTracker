@@ -1,7 +1,14 @@
 const inquirer = requier("inquirer");
 const server = require("./server");
 
-require("console.table");
+const mysql = require("mysql2");
+const connection = mysql.createConnection({
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "root",
+  database: "emp_db",
+});
 
 // upon start, presented with following options: view all departments, view all roles, view all employees, add a department, add a role, add an employee, and update an employee role
 
@@ -15,69 +22,6 @@ const startMenu = [
   "Update an Employee",
 ];
 
-const addDeptQ = [
-  {
-    type: "input",
-    message: "Enter new department:",
-    name: "addDept",
-  },
-];
-
-const addRoleQ = [
-  {
-    type: "input",
-    message: "Enter the name of the new role to be added:",
-    name: "addRoleName",
-  },
-  {
-    type: "input",
-    message: "Enter the salary for the new role:",
-    name: "addRoleSalary",
-  },
-  {
-    type: "input",
-    message: "Enter the department for the new role:",
-    name: "addRoleDept",
-  },
-];
-
-const addEmpQ = [
-  {
-    type: "input",
-    message: "Enter your new employee's first name",
-    name: "firstName",
-  },
-  {
-    type: "input",
-    message: "Enter your new employee's last name:",
-    name: "lastName",
-  },
-  {
-    type: "input",
-    message: "Enter your new employee's role:",
-    name: "empRole",
-  },
-  {
-    type: "input",
-    message: "Enter your new employee's manager:",
-    name: "empMgr",
-  },
-];
-
-const updEmpRoleQ = [
-  {
-    type: "input",
-    message:
-      "Enter the last name of the employee who's role you need to update:",
-    name: "updRoleName",
-  },
-  {
-    type: "input",
-    message: "Enter the new role for your employee:",
-    name: "updRoleName",
-  },
-];
-
 const init = () => {
   inquirer
     .prompt({
@@ -89,26 +33,37 @@ const init = () => {
     .then((userInput) => {
       switch (userInput.startMenuChoice) {
         case "View All Departments":
-          server.viewAllDepts;
+          server.viewAllDepts();
           break;
         case "View All Roles":
-          server.viewAllRoles;
+          server.viewAllRoles();
           break;
         case "View All Employees":
-          server.viewAllEmps;
+          server.viewAllEmps();
           break;
         case "Add a Department":
-          server.addDept;
+          server.addDept();
           break;
         case "Add a Role":
-          server.addRole;
+          server.addRole();
           break;
         case "Add an Employee":
-          server.addEmp;
+          server.addEmp();
           break;
         case "Update an Employee Role":
-          server.updEmpRole;
+          server.updEmpRole();
           break;
       }
     });
+};
+
+connection.connect((err) => {
+  if (err) throw err;
+  console.log(`Now connected as ID ${connection.threadId}!`);
+  init();
+});
+
+module.exports = {
+  connection,
+  init,
 };
