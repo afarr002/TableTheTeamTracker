@@ -19,6 +19,13 @@ const startMenu = [
   "Add an Employee",
   "Update an Employee's Role",
   "Update an Employee's Manager",
+  "View All Staff by Manager",
+  /* "View Specific Manager's Employees", */
+  "View Staff by Department",
+  "Delete Department",
+  "Delete Role",
+  "Delete Employee",
+  /* "View Department's Budgets", */
 ];
 
 const init = () => {
@@ -55,6 +62,27 @@ const init = () => {
         case "Update an Employee's Manager":
           updEmpMgr();
           break;
+        case "View Staff by Manager":
+          viewEmpByMgr();
+          break;
+        /* case "View Specific Manager's Employees":
+          viewMgrsEmps();
+          break; */
+        case "View Staff by Department":
+          viewEmpByDept();
+          break;
+        case "Delete Department":
+          dltDept();
+          break;
+        case "Delete Role":
+          dltRole();
+          break;
+        case "Delete Employee":
+          dltEmp();
+          break;
+        /* case "View Department's Budgets":
+          viewDeptBdgt();
+          break; */
       }
     });
 };
@@ -84,7 +112,9 @@ const viewAllRoles = () => {
       departments.name AS departments,
       roles.salary
     FROM roles 
-      LEFT JOIN departments on roles.department_id = departments.id`,
+      LEFT JOIN departments on roles.department_id = departments.id
+    ORDER BY
+      department_id`,
     (err, res) => {
       if (err) throw err;
       console.log("\n");
@@ -177,7 +207,9 @@ const addRole = () => {
       departments.name AS departments,
       roles.salary
     FROM roles 
-      LEFT JOIN departments on roles.department_id = departments.id`,
+      LEFT JOIN departments on roles.department_id = departments.id
+    ORDER BY
+      department_id`,
       (err, res) => {
         if (err) throw err;
         console.log("\n");
@@ -338,6 +370,195 @@ const updEmpMgr = () => {
         LEFT JOIN departments on roles.department_id = departments.id 
         LEFT JOIN employees manager on manager.id = employees.manager_id
     ORDER BY
+      employees.manager_id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Staff List:", res);
+        init();
+      }
+    );
+  });
+};
+
+const viewEmpByMgr = () => {
+  connection.query(
+    `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      employees.manager_id`,
+    (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Total Staff by Manager:", res);
+      init();
+    }
+  );
+};
+
+/*
+const viewMgrsEmpsQ = [
+  {
+    type: "input",
+    message:
+      "Enter the last name of the manager who's employees you need to see:",
+    name: "viewMgrsEmpsLastName",
+  },
+  {
+    type: "input",
+    message:
+      "Enter the first name of the manager who's employees you need to see:",
+    name: "viewMgrsEmpsFirstName",
+  },
+];
+
+const viewMgrsEmps = () => {
+  inquirer.prompt(viewMgrsEmpsQ).then((viewMgrsEmpsA) => {
+    connection.query(
+      `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    WHERE
+      employees.manager_id = NULL AND employees.last_name = ? AND employees.first_name = ?`,
+      [viewMgrsEmpsA.viewMgrsEmpsLastName, viewMgrsEmpsA.viewMgrsEmpsFirstName],
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Total Staff by Manager:", res);
+        init();
+      }
+    );
+  });
+};
+*/
+
+const viewEmpByDept = () => {
+  connection.query(
+    `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
+      departments.id`,
+    (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Total Staff by Department:", res);
+      init();
+    }
+  );
+};
+
+const dltDeptQ = [
+  {
+    type: "input",
+    message: "Enter department to delete:",
+    name: "dltDept",
+  },
+];
+
+const dltDept = () => {
+  inquirer.prompt(dltDeptQ).then((dltDeptA) => {
+    connection.query("DELETE FROM departments WHERE ?", {
+      name: dltDeptA.dltDept,
+    });
+    connection.query("SELECT * FROM departments", (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Updated Departments:", res);
+      init();
+    });
+  });
+};
+
+const dltRoleQ = [
+  {
+    type: "input",
+    message: "Enter role to delete:",
+    name: "dltRole",
+  },
+];
+
+const dltRole = () => {
+  inquirer.prompt(dltRoleQ).then((dltRoleA) => {
+    connection.query("DELETE FROM roles WHERE ?", {
+      title: dltRoleA.dltRole,
+    });
+    connection.query(
+      `SELECT * FROM roles ORDER BY department_id`,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Updated Roles:", res);
+        init();
+      }
+    );
+  });
+};
+
+const dltEmpQ = [
+  {
+    type: "input",
+    message: "Enter employee's first name to delete:",
+    name: "dltEmpFirstName",
+  },
+  {
+    type: "input",
+    message: "Enter employee's last name to delete:",
+    name: "dltEmpLastName",
+  },
+];
+
+const dltEmp = () => {
+  inquirer.prompt(dltEmpQ).then((dltEmpA) => {
+    connection.query(
+      "DELETE FROM employees WHERE first_name = ? AND last_name = ?",
+      [dltEmpA.dltEmpFirstName, dltEmpA.dltEmpLastName]
+    );
+    connection.query(
+      `SELECT 
+      employees.id,
+      employees.first_name,
+      employees.last_name,
+      roles.title,
+      departments.name AS departments,
+      roles.salary,
+      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM
+      employees
+        LEFT JOIN roles on employees.role_id = roles.id 
+        LEFT JOIN departments on roles.department_id = departments.id 
+        LEFT JOIN employees manager on manager.id = employees.manager_id
+    ORDER BY
       employees.role_id`,
       (err, res) => {
         if (err) throw err;
@@ -350,27 +571,9 @@ const updEmpMgr = () => {
 };
 
 /*
-const viewEmpByMgr = () => {
+
+const viewDeptBdgt = () => {
 
 }
 
-const viewEmpByDept = () => {
-
-}
-
-const dltDept = () => {
-
-}
-
-const dltRole = () => {
-
-}
-
-const dltEmp = () => {
-
-}
-
-const viewBudgetByDept = () => {
-
-}
 */
