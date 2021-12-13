@@ -3,7 +3,7 @@ const mysql = require("mysql2");
 const figlet = require("figlet");
 require("console.table");
 
-const connection = mysql.createConnection({
+const db = mysql.createConnection({
   host: "localhost",
   port: 3306,
   user: "root",
@@ -23,17 +23,17 @@ const startMenuQ = [
   "View All Staff by Manager",
   /* "View Specific Manager's Employees",
   "View Specific Department's Employees", */
-  "View Staff by Department",
-  "Delete Department",
+  "View All Staff by Department",
   "Delete Role",
+  "Delete Department",
   "Delete Employee",
-  /* "View Department's Budgets", */
+  // View Department's Budgets",
   "Quit",
 ];
 
 const init = () => {
   console.clear();
-  largeLogo("Table the Team Tracker");
+  logo("Team Tracker");
 
   inquirer
     .prompt({
@@ -68,7 +68,7 @@ const init = () => {
         case "Update an Employee's Manager":
           updEmpMgr();
           break;
-        case "View Staff by Manager":
+        case "View All Staff by Manager":
           viewEmpByMgr();
           break;
         /* case "View Specific Manager's Employees":
@@ -77,11 +77,11 @@ const init = () => {
         case "View Specific Department's Employees":
           viewDeptsEmps();
           break; */
-        case "View Staff by Department":
-          viewEmpByDept();
-          break;
         case "Delete Department":
           dltDept();
+          break;
+        case "View All Staff by Department":
+          viewEmpByDept();
           break;
         case "Delete Role":
           dltRole();
@@ -94,8 +94,8 @@ const init = () => {
           break; */
         case "Quit":
           console.clear();
-          smallLogo("See you later!");
-          connection.end();
+          logo("See you later!");
+          db.end();
           break;
         default:
           console.log("Enter a valid answer");
@@ -105,29 +105,28 @@ const init = () => {
     });
 };
 
-connection.connect((err) => {
+db.connect((err) => {
   if (err) throw err;
-  console.log(`Now connected as ID ${connection.threadId}!`);
   init();
 });
 
 const viewAllDepts = () => {
   console.clear();
-  smallLogo("Departments:");
+  logo("Departments:");
   // presented with a formatted table showing department names and department ids
-  connection.query("SELECT * FROM departments", (err, res) => {
+  db.query("SELECT * FROM departments", (err, res) => {
     if (err) throw err;
     console.log("\n");
-    console.table("All Departments:", res);
+    console.table("Departments:", res);
     terminate();
   });
 };
 
 const viewAllRoles = () => {
   console.clear();
-  smallLogo("Roles:");
+  logo("Roles:");
   // presented with the job title, role id, the department that role belongs to, and the salary for that role
-  connection.query(
+  db.query(
     `SELECT
       roles.id,
       roles.title,
@@ -140,7 +139,7 @@ const viewAllRoles = () => {
     (err, res) => {
       if (err) throw err;
       console.log("\n");
-      console.table("All Roles:", res);
+      console.table("Roles:", res);
       terminate();
     }
   );
@@ -148,9 +147,9 @@ const viewAllRoles = () => {
 
 const viewAllEmps = () => {
   console.clear();
-  smallLogo("Staff:");
+  logo("Staff:");
   // presented with a formatted table showing employee data, including employee ids, first names, last names, job titles, departments, salaries, and managers that the employees report to
-  connection.query(
+  db.query(
     `SELECT 
       employees.id,
       employees.first_name,
@@ -185,13 +184,13 @@ const addDeptQ = [
 
 const addDept = () => {
   console.clear();
-  smallLogo("Add Department");
+  logo("Department+");
   // prompted to enter the name of the department and that department is added to the database
   inquirer.prompt(addDeptQ).then((addDeptA) => {
-    connection.query("INSERT INTO departments SET ?", {
+    db.query("INSERT INTO departments SET ?", {
       name: addDeptA.addDept,
     });
-    connection.query("SELECT * FROM departments", (err, res) => {
+    db.query("SELECT * FROM departments", (err, res) => {
       if (err) throw err;
       console.log("\n");
       console.table("Updated Departments:", res);
@@ -220,15 +219,15 @@ const addRoleQ = [
 
 const addRole = () => {
   console.clear();
-  smallLogo("Add Role");
+  logo("Role+");
   // prompted to enter the name, salary, and department for the role and that role is added to the database
   inquirer.prompt(addRoleQ).then((addRoleA) => {
-    connection.query("INSERT INTO roles SET ?", {
+    db.query("INSERT INTO roles SET ?", {
       title: addRoleA.addRoleTitle,
       salary: addRoleA.addRoleSalary,
       department_id: addRoleA.addRoleDeptID,
     });
-    connection.query(
+    db.query(
       `SELECT
       roles.id,
       roles.title,
@@ -273,17 +272,17 @@ const addEmpQ = [
 
 const addEmp = () => {
   console.clear();
-  smallLogo("Add Employee");
+  logo("Employee+");
 
   // prompted to enter the employee’s first name, last name, role, and manager, and that employee is added to the database
   inquirer.prompt(addEmpQ).then((addEmpA) => {
-    connection.query("INSERT INTO employees SET ?", {
+    db.query("INSERT INTO employees SET ?", {
       first_name: addEmpA.firstName,
       last_name: addEmpA.lastName,
       role_id: addEmpA.empRoleID,
       manager_id: addEmpA.empMgrID === "" ? null : addEmpA.empMgrID,
     });
-    connection.query(
+    db.query(
       `SELECT 
       employees.id,
       employees.first_name,
@@ -302,7 +301,7 @@ const addEmp = () => {
       (err, res) => {
         if (err) throw err;
         console.log("\n");
-        console.table("Updated Staff List:", res);
+        console.table("Updated Staff:", res);
         terminate();
       }
     );
@@ -314,7 +313,13 @@ const updEmpRoleQ = [
     type: "input",
     message:
       "Enter the last name of the employee who's role you need to update:",
-    name: "updRoleName",
+    name: "updRoleLastName",
+  },
+  {
+    type: "input",
+    message:
+      "Enter the first name of the employee who's role you need to update:",
+    name: "updRoleFirstName",
   },
   {
     type: "input",
@@ -325,14 +330,18 @@ const updEmpRoleQ = [
 
 const updEmpRole = () => {
   console.clear();
-  smallLogo("Update Employee Role");
+  logo("Role<==>");
   // prompted to select an employee to update and their new role and this information is updated in the database
   inquirer.prompt(updEmpRoleQ).then((updEmpRoleA) => {
-    connection.query("UPDATE employees SET role_id = ? WHERE last_name = ?", [
-      updEmpRoleA.updRoleID,
-      updEmpRoleA.updRoleName,
-    ]);
-    connection.query(
+    db.query(
+      "UPDATE employees SET role_id = ? WHERE last_name = ? AND first_name = ?",
+      [
+        updEmpRoleA.updRoleID,
+        updEmpRoleA.updRoleLastName,
+        updEmpRoleA.updRoleFirstName,
+      ]
+    );
+    db.query(
       `SELECT 
       employees.id,
       employees.first_name,
@@ -380,9 +389,9 @@ const updEmpMgrQ = [
 
 const updEmpMgr = () => {
   console.clear();
-  smallLogo("Update Employee's Manager");
+  logo("Manager<==>");
   inquirer.prompt(updEmpMgrQ).then((updEmpMgrA) => {
-    connection.query(
+    db.query(
       "UPDATE employees SET manager_id = ? WHERE last_name = ? AND first_name = ?",
       [
         updEmpMgrA.updMgrID >= 99 ? null : updEmpMgrA.updMgrID,
@@ -390,7 +399,7 @@ const updEmpMgr = () => {
         updEmpMgrA.updMgrFirstName,
       ]
     );
-    connection.query(
+    db.query(
       `SELECT 
       employees.id,
       employees.first_name,
@@ -416,10 +425,99 @@ const updEmpMgr = () => {
   });
 };
 
+/*
+
+const viewMgrsEmpsQ = [
+  {
+    type: "input",
+    message:
+      "Enter the first name of the manager who's employees you need to see:",
+    name: "viewMgrsEmpsFirstName",
+  },
+  {
+    type: "input",
+    message:
+      "Enter the last name of the manager who's employees you need to see:",
+    name: "viewMgrsEmpsLastName",
+  },
+];
+
+const viewMgrsEmps = () => {
+  console.clear();
+  logo("Managers:");
+  inquirer.prompt(viewMgrsEmpsQ).then((viewMgrsEmpsA) => {
+    db.query(
+      `SELECT 
+        employees.id,
+        employees.first_name,
+        employees.last_name,
+        roles.title,
+        departments.name AS departments,
+        roles.salary,
+      FROM
+        employees
+          LEFT JOIN roles on employees.role_id = roles.id 
+          LEFT JOIN departments on roles.department_id = departments.id
+      WHERE
+        employees.manager_id = NULL AND employees.first_name = ? AND employees.last_name = ?`,
+      viewMgrsEmpsA.viewMgrsEmpsFirstName,
+      viewMgrsEmpsA.viewMgrsEmpsLastName,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table("Total Staff:", res);
+        terminate();
+      }
+    );
+  });
+};
+
+*/
+
+/* 
+
+const viewDeptsEmpsQ = [
+  {
+    type: "input",
+    message: "Enter department ID whos staff you want to view:",
+    name: "viewDeptsEmpsID",
+  },
+];
+
+const viewDeptsEmps = () => {
+  console.clear();
+  logo("Staff by Department");
+
+  inquirer.prompt(viewDeptsEmpsQ).then((viewDeptsEmpsA) => {
+    db.query(
+      `SELECT
+        employees.first_name,
+        employees.last_name,
+        roles.title,
+        departments.name AS departments,
+        roles.salary,
+      FROM
+        employees,
+        roles
+      WHERE
+        roles.department_id = ?`,
+      viewDeptsEmpsA.viewDeptsEmpsID,
+      (err, res) => {
+        if (err) throw err;
+        console.log("\n");
+        console.table(res);
+        terminate();
+      }
+    );
+  });
+};
+
+*/
+
 const viewEmpByMgr = () => {
   console.clear();
-  smallLogo("Staff by Manager:");
-  connection.query(
+  logo("Manager:");
+  db.query(
     `SELECT 
       employees.id,
       employees.first_name,
@@ -438,7 +536,7 @@ const viewEmpByMgr = () => {
     (err, res) => {
       if (err) throw err;
       console.log("\n");
-      console.table(res);
+      console.table("Staff by Manager:", res);
       terminate();
     }
   );
@@ -446,8 +544,8 @@ const viewEmpByMgr = () => {
 
 const viewEmpByDept = () => {
   console.clear();
-  smallLogo("Staff by Department:");
-  connection.query(
+  logo("Department:");
+  db.query(
     `SELECT 
       employees.id,
       employees.first_name,
@@ -466,7 +564,7 @@ const viewEmpByDept = () => {
     (err, res) => {
       if (err) throw err;
       console.log("\n");
-      console.table("Total Staff by Department:", res);
+      console.table("Staff by Department:", res);
       terminate();
     }
   );
@@ -475,22 +573,23 @@ const viewEmpByDept = () => {
 const dltDeptQ = [
   {
     type: "input",
-    message: "Enter department to delete:",
+    message:
+      "Enter department to delete: (Cannot delete department that has a roll assigned to it)",
     name: "dltDept",
   },
 ];
 
 const dltDept = () => {
   console.clear();
-  smallLogo("Delete Department");
+  logo("Delete Dept");
   inquirer.prompt(dltDeptQ).then((dltDeptA) => {
-    connection.query("DELETE FROM departments WHERE ?", {
+    db.query("DELETE FROM departments WHERE ?", {
       name: dltDeptA.dltDept,
     });
-    connection.query("SELECT * FROM departments", (err, res) => {
+    db.query("SELECT * FROM departments", (err, res) => {
       if (err) throw err;
       console.log("\n");
-      console.table("Updated Departments:", res);
+      console.table("Departments:", res);
       terminate();
     });
   });
@@ -499,27 +598,25 @@ const dltDept = () => {
 const dltRoleQ = [
   {
     type: "input",
-    message: "Enter role to delete:",
+    message:
+      "Enter role to delete: (Cannot delete role that has an employee assigned to it)",
     name: "dltRole",
   },
 ];
 
 const dltRole = () => {
   console.clear();
-  smallLogo("Delete Roll");
+  logo("Roll-");
   inquirer.prompt(dltRoleQ).then((dltRoleA) => {
-    connection.query("DELETE FROM roles WHERE ?", {
+    db.query("DELETE FROM roles WHERE ?", {
       title: dltRoleA.dltRole,
     });
-    connection.query(
-      `SELECT * FROM roles ORDER BY department_id`,
-      (err, res) => {
-        if (err) throw err;
-        console.log("\n");
-        console.table("Updated Roles:", res);
-        terminate();
-      }
-    );
+    db.query(`SELECT * FROM roles ORDER BY department_id`, (err, res) => {
+      if (err) throw err;
+      console.log("\n");
+      console.table("Updated Roles:", res);
+      terminate();
+    });
   });
 };
 
@@ -538,13 +635,13 @@ const dltEmpQ = [
 
 const dltEmp = () => {
   console.clear();
-  smallLogo("Delete Employee");
+  logo("Employee-");
   inquirer.prompt(dltEmpQ).then((dltEmpA) => {
-    connection.query(
-      "DELETE FROM employees WHERE first_name = ? AND last_name = ?",
-      [dltEmpA.dltEmpFirstName, dltEmpA.dltEmpLastName]
-    );
-    connection.query(
+    db.query("DELETE FROM employees WHERE first_name = ? AND last_name = ?", [
+      dltEmpA.dltEmpFirstName,
+      dltEmpA.dltEmpLastName,
+    ]);
+    db.query(
       `SELECT 
       employees.id,
       employees.first_name,
@@ -569,63 +666,12 @@ const dltEmp = () => {
     );
   });
 };
-
-/*
-
-const viewDeptBdgtQ = [
-  {
-    type: "input",
-    message: "Enter department ID whos budget you would like to see:",
-    name: "viewDeptBdgt",
-  },
-];
-
-const viewDeptBdgt = () => {
-  console.clear();
-  smallLogo("Department Budgets");
-  inquirer.prompt(viewDeptBdgtQ).then((viewDeptBdgtA) => {
-    connection.query(
-      `SELECT
-        roles.salary AS budget
-      FROM
-        roles
-      WHERE
-          department_id = ?`,
-      viewDeptBdgtA.viewDeptBdgt
-    );
-    connection.query(
-      `SELECT 
-      employees.id,
-      employees.first_name,
-      employees.last_name,
-      roles.title,
-      departments.name AS departments,
-      roles.salary,
-      CONCAT(manager.first_name, ' ', manager.last_name) AS manager
-    FROM
-      employees
-        LEFT JOIN roles on employees.role_id = roles.id 
-        LEFT JOIN departments on roles.department_id = departments.id 
-        LEFT JOIN employees manager on manager.id = employees.manager_id
-    ORDER BY
-      employees.role_id`,
-      (err, res) => {
-        if (err) throw err;
-        console.log("\n");
-        console.table("Updated Staff List:", res);
-        terminate();
-      }
-    );
-  });
-};
-
-*/
 
 const terminateQ = [
   {
     type: "confirm",
     message: "Return to main menu?",
-    name: "temrinate",
+    name: "terminate",
   },
 ];
 
@@ -635,28 +681,18 @@ const terminate = () => {
       init();
     } else {
       console.clear();
-      smallLogo("See you next time!");
-      connection.end();
+      logo("Bye!!");
+      db.end();
     }
   });
 };
 
-const largeLogo = (string) => {
+const logo = (string) => {
   console.log(
     figlet.textSync(string, {
       font: "Ghost",
-      horizontalLayout: "controlled smushing",
-      verticalLayout: "default",
-    })
-  );
-};
-
-const smallLogo = (string) => {
-  console.log(
-    figlet.textSync(string, {
-      font: "Ghost",
-      horizontalLayout: "controlled smushing",
-      verticalLayout: "default",
+      horizontalLayout: "fitted",
+      verticalLayout: "controlled smushing",
     })
   );
 };
